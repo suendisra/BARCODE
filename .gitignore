@@ -4,6 +4,7 @@
 [Ll][Ii][Bb]/
 [Rr][Ee][Ll][Ee][Aa][Ss][Ee]/
 [Ss][Hh][Aa][Dd][Ee][Rr]/
+.vs/
 *.swp
 *.vcxproj
 *.vcxproj.filters
