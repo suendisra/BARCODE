@@ -19,6 +19,8 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previnst, LPWSTR cmd, int show
     {
         // loop application window procedure
         wnd.mode = LOOP_GET;
+        wnd.init = Standup;
+        wnd.stop = Shutdown;
         Loop(&wnd);
     }
 
