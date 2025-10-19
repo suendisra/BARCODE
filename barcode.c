@@ -18,7 +18,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previnst, LPWSTR cmd, int show
     if(Dialog(MainDlgProc, IDD_BARCODE, NULL, &wnd) == TRUE)
     {
         // loop application window procedure
-        wnd.mode = LOOP_GET;
+        wnd.mode = LOOP_DLG;
         wnd.init = Standup;
         wnd.stop = Shutdown;
         Loop(&wnd);
@@ -46,6 +46,18 @@ INT_PTR CALLBACK MainDlgProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             // set dialog caption and center on screen
             TextSet(hwnd, 0, L"%s %s", APP_TITLE, APP_VERSION);
             Center(hwnd, 0, NULL);
+
+            // get dimensions of drawing area
+            Dims(hwnd, IDC_BARCODE, NULL, &bc.dims);
+            break;
+
+        case WM_PAINT:
+            // whenever the dialog is repainted, we need to repaint the barcode too
+            if(GphPaint(&gph, hwnd) == TRUE)
+            {
+                DrawBarcode();
+                GphPaint(&gph, hwnd);
+            }
             break;
 
         case WM_SYSCOMMAND:
@@ -65,6 +77,25 @@ INT_PTR CALLBACK MainDlgProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         case WM_COMMAND:
             switch(LOWORD(wp))
             {
+                case IDC_BARCODE_TYPE:
+                    switch(HIWORD(wp))
+                    {
+                        case LBN_SELCHANGE:
+                            // whenever there is a change to the barcode type, reflect dialog changes
+                            EnableOptions(hwnd);
+                            break;
+                    }
+                    break;
+
+                case IDOK:
+                    // user has set in the barcode information, obtain it
+                    if(ConfigBarcode(hwnd) == TRUE)
+                    {
+                        // force a window redraw to produce new barcode
+                        SendMessage(hwnd, WM_PAINT, 0, 0);
+                    }
+                    break;
+
                 case IDCANCEL:
                     SendMessage(hwnd, WM_SYSCOMMAND, SC_CLOSE, 0);
                     break;
