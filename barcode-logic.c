@@ -22,26 +22,46 @@ BOOL ConfigBarcode(const HWND hwnd)
     PX24    back = {0};
     PX24    color = {0};
 
+    wchar_t start[STR_TINY] = {0};
+    wchar_t text[STR_MEDIUM] = {0};
+    wchar_t stop[STR_TINY] = {0};
+
     BOOL    success = FALSE;
 
     if(hwnd != NULL)
     {
         // grab the barcode text
-        if(TextGet(hwnd, IDC_BARCODE_TEXT, bc.text, sizeof(bc.text)) == TRUE)
+        if(TextGet(hwnd, IDC_BARCODE_TEXT, text, sizeof(text)) == TRUE)
         {
-            // get the other barcode properties
-            bc.type = ListIndex(hwnd, IDC_BARCODE_TYPE, LISTIDX_SEL);
-            bc.drawtext = (IsDlgButtonChecked(hwnd, IDC_BARCODE_SHOW_TEXT) == BST_CHECKED);
+            // start code
+            if(Enabled(hwnd, IDC_CHAR_START) == TRUE)
+            {
+                ListItem(hwnd, IDC_CHAR_START, LISTIDX_SEL, start, sizeof(start));
+            }
 
-            // grab color for the bar
-            GetColor(hwnd, TRUE, &color);
-            bc.fore = RGB(color.r, color.g, color.b);
+            // stop code
+            if(Enabled(hwnd, IDC_CHAR_STOP) == TRUE)
+            {
+                ListItem(hwnd, IDC_CHAR_STOP, LISTIDX_SEL, stop, sizeof(stop));
+            }
 
-            // grab color for the space
-            GetColor(hwnd, FALSE, &back);
-            bc.back = RGB(back.r, back.g, back.b);
+            // set in the barcode text
+            if(StrFormat(bc.text, sizeof(bc.text), L"%s%s%s", start, text, stop) == TRUE)
+            {
+                // get the other barcode properties
+                bc.type = ListIndex(hwnd, IDC_BARCODE_TYPE, LISTIDX_SEL);
+                bc.drawtext = (IsDlgButtonChecked(hwnd, IDC_BARCODE_SHOW_TEXT) == BST_CHECKED);
 
-            success = TRUE;
+                // grab color for the bar
+                GetColor(hwnd, TRUE, &color);
+                bc.fore = RGB(color.r, color.g, color.b);
+
+                // grab color for the space
+                GetColor(hwnd, FALSE, &back);
+                bc.back = RGB(back.r, back.g, back.b);
+
+                success = TRUE;
+            }
         }
     }
 
