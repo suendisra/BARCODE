@@ -8,6 +8,7 @@
 #define _BARCODE_H_
 
 #include <util.h>
+#include <util-cli.h>
 #include <util-map.h>
 #include <util-thread.h>
 

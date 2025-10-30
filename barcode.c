@@ -11,17 +11,27 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
 /* wWinMain */
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previnst, LPWSTR cmd, int show)
 {
-    WinInit(instance, previnst, cmd, show);
+    long    argc = 0;
+    LPWSTR  *args = NULL;
 
-    // create window and loop it
-    Dims(NULL, 0, NULL, &wnd.client);
-    if(Dialog(MainDlgProc, IDD_BARCODE, NULL, &wnd) == TRUE)
+    // if CLI arguments were given attempt barcode generation from given parameters
+    if(CliArgs(&argc, args) == TRUE)
     {
-        // loop application window procedure
-        wnd.mode = LOOP_DLG;
-        wnd.init = Standup;
-        wnd.stop = Shutdown;
-        Loop(&wnd);
+        // TODO - add in arguments to process
+    }else{
+        // initialize for GUI application
+        WinInit(instance, previnst, cmd, show);
+
+        // create window and loop it
+        Dims(NULL, 0, NULL, &wnd.client);
+        if(Dialog(MainDlgProc, IDD_BARCODE, NULL, &wnd) == TRUE)
+        {
+            // loop application window procedure
+            wnd.mode = LOOP_DLG;
+            wnd.init = Standup;
+            wnd.stop = Shutdown;
+            Loop(&wnd);
+        }
     }
 
     return(0);
