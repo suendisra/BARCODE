@@ -46,6 +46,13 @@ WNDW    wnd;
 GPH     gph;
 
 /**
+  @fn           BOOL BarcodeCLI(void)
+  @brief        process CLI arguments
+  @return       TRUE if command line arguments were processed, FALSE otherwise
+*/
+BOOL BarcodeCLI(void);
+
+/**
   @fn           BOOL ConfigBarcode(const HWND hwnd)
   @brief        grabs dialog information for drawing the barcode
   @param[in]    hwnd handle to dialog window with information needed to generate the barcode

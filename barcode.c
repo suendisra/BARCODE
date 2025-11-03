@@ -11,14 +11,9 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
 /* wWinMain */
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previnst, LPWSTR cmd, int show)
 {
-    long    argc = 0;
-    LPWSTR  *args = NULL;
-
-    // if CLI arguments were given attempt barcode generation from given parameters
-    if(CliArgs(&argc, args) == TRUE)
+    // if running app from command line, do the work and exit
+    if(BarcodeCLI() == FALSE)
     {
-        // TODO - add in arguments to process
-    }else{
         // initialize for GUI application
         WinInit(instance, previnst, cmd, show);
 
