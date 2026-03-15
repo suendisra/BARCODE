@@ -2,7 +2,6 @@
   @file     barcode.h
   @brief    Header file for BARCODE application
   @author   suendisra
-  @version  0.0.0
 */
 #ifndef _BARCODE_H_
 #define _BARCODE_H_
@@ -10,7 +9,7 @@
 #include <util.h>
 #include <util-cli.h>
 #include <util-map.h>
-#include <util-thread.h>
+#include <util-async.h>
 
 #include <gph.h>
 #include <gph-barcode.h>

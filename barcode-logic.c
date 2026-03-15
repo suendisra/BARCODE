@@ -1,3 +1,8 @@
+/**
+  @file     barcode-logic.c
+  @brief    Source file for BARCODE application primary logic
+  @author   suendisra
+*/
 #include "barcode.h"
 
 #define BARCODE_ERR_DRAWING L"Error encountered while attempting to draw given barcode text"
