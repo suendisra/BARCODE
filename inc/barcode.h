@@ -46,6 +46,15 @@ WNDW    wnd;
 GPH     gph;
 
 /**
+  @fn           BOOL Commands(const HWND hwnd, const WPARAM wp, const LPARAM lp)
+  @brief        handle user commands given to GUI
+  @param[in]    hwnd handle to dialog window
+  @param[in]    wp the WPARAM to switch on for command ID
+  @param[in]    lp the LPARAM for which additional information may be present
+*/
+BOOL Commands(const HWND hwnd, const WPARAM wp, const LPARAM lp);
+
+/**
   @fn           BOOL ConfigBarcode(const HWND hwnd)
   @brief        grabs dialog information for drawing the barcode
   @param[in]    hwnd handle to dialog window with information needed to generate the barcode
@@ -56,7 +65,7 @@ BOOL ConfigBarcode(const HWND hwnd);
   @fn           void DrawBarcode(void)
   @brief        draw the background for the barcode area
 */
-void DrawBarcode(void);
+void DrawBarcode(const HWND hwnd);
 
 /**
   @fn           void EnableOptions(const HWND hwnd)

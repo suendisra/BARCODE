@@ -5,20 +5,45 @@
 #include "barcode.h"
 #include "resource.h"
 
+#include <gph-bar.h>
 #include <gph-font.h>
 #include <gph-px.h>
+#include <gph-std.h>
 
 #include <util-mem.h>
 #include <util-str.h>
 
-#define BARCODE_ERR_DRAWING L"Error encountered while attempting to draw given barcode text"
-#define BARCODE_FONT_NAME   L"Consolas"
-#define BARCODE_FONT_SIZE   24
+#define BAR_ERR_DRAWING L"Error encountered while attempting to draw given barcode text"
+#define BAR_FONT_NAME   L"Consolas"
+#define BAR_FONT_SIZE   24
 
-#define BARCODE_PAD_CX      10
-#define BARCODE_PAD_CY      20
+#define BAR_PAD_CX      10
+#define BAR_PAD_CY      20
 
 #define RGB_TEXT_LIMIT      3
+
+enum BARCODES
+{
+    BAR_INVAL = -1,
+    BAR_39,
+    BAR_39_MOD43,
+    BAR_93,
+    BAR_CODA,
+    BAR_I2OF5,
+    BAR_UPCA,
+    BAR_UPCE,
+    BAR_LAST
+};
+
+static const wchar_t    barcodes[BAR_LAST][STR_SMALL] = {
+                            L"BARCODE 39",
+                            L"BARCODE 39 MOD 43",
+                            L"BARCODE 93",
+                            L"CODABAR",
+                            L"I2of5",
+                            L"UPCA",
+                            L"UPCE"
+                        };
 
 static INDEX    font = -1;
 
@@ -26,6 +51,37 @@ static INDEX    font = -1;
 static void GetColor(const HWND hwnd, const BOOL fore, PX24 *clr);
 static void SetupDialog(void);
 static BOOL SetupGDI(void);
+
+/* handle user command given to the GUI */
+BOOL Commands(const HWND hwnd, const WPARAM wp, const LPARAM lp)
+{
+    BOOL    handled = FALSE;
+
+    if(lp != 0){}
+    switch(LOWORD(wp))
+    {
+        case IDC_BAR_TYPE:
+            switch(HIWORD(wp))
+            {
+                case LBN_SELCHANGE:
+                    // whenever there is a change to the barcode type, reflect dialog changes
+                    EnableOptions(hwnd);
+                    break;
+            }
+            break;
+
+        case IDOK:
+            // user has set in the barcode information, obtain it
+            if(ConfigBarcode(hwnd))
+            {
+                // force a window redraw to produce new barcode
+                Refresh(hwnd);
+            }
+            break;
+    }
+
+    return(handled);
+}
 
 /* grabs dialog information for drawing the barcode */
 BOOL ConfigBarcode(const HWND hwnd)
@@ -42,7 +98,7 @@ BOOL ConfigBarcode(const HWND hwnd)
     if(hwnd != NULL)
     {
         // grab the barcode text
-        if(TextGet(hwnd, IDC_BARCODE_TEXT, text, sizeof(text)) == TRUE)
+        if(TextGet(hwnd, IDC_BAR_TEXT, text, sizeof(text)) == TRUE)
         {
             // start code
             if(Enabled(hwnd, IDC_CHAR_START) == TRUE)
@@ -60,8 +116,8 @@ BOOL ConfigBarcode(const HWND hwnd)
             if(StrFormat(bc.text, sizeof(bc.text), L"%s%s%s", start, text, stop) == TRUE)
             {
                 // get the other barcode properties
-                bc.type = ListIndex(hwnd, IDC_BARCODE_TYPE, LISTIDX_SEL);
-                bc.drawtext = (IsDlgButtonChecked(hwnd, IDC_BARCODE_SHOW_TEXT) == BST_CHECKED);
+                bc.type = ListIndex(hwnd, IDC_BAR_TYPE, LISTIDX_SEL);
+                bc.drawtext = (IsDlgButtonChecked(hwnd, IDC_BAR_SHOW_TEXT) == BST_CHECKED);
 
                 // grab color for the bar
                 GetColor(hwnd, TRUE, &color);
@@ -80,34 +136,38 @@ BOOL ConfigBarcode(const HWND hwnd)
 }
 
 /* draw the background for the barcode area */
-void DrawBarcode(void)
+void DrawBarcode(const HWND hwnd)
 {
     QUAD    dims = {0};
     long    cy = 0;
 
-    GphClear(gph, NULL, GGRAY);
-
-    if(bc.text[0] != CHARNULL)
+    if(GphPaint(gph, hwnd))
     {
-        // attempt to draw the barcode
-        if(Barcode(gph, &bc.dims, bc.type, bc.fore, bc.back, bc.text, sizeof(bc.text)) == TRUE)
+        GphClear(gph, NULL, GGRAY);
+        if(bc.text[0] != CHARNULL)
         {
-            // success, draw text if desired
-            if((bc.drawtext == TRUE) && (FontDims(font, GphDC(gph), NULL, &cy, L"%s", bc.text) == TRUE))
+            // attempt to draw the barcode
+            //if(Barcode(gph, &bc.dims, bc.type, bc.fore, bc.back, bc.text, sizeof(bc.text)))
+            if(FALSE)
             {
-                Quad(bc.dims.x1, (bc.dims.y2 - cy), bc.dims.x2, bc.dims.y2, &dims);
-                GphFontColor(gph, bc.fore, bc.back);
-                GphText(gph, &dims, ALIGN_LEFT, L"%s", bc.text);
+                // success, draw text if desired
+                if(bc.drawtext && FontDims(font, GphDC(gph), NULL, &cy, L"%s", bc.text))
+                {
+                    Quad(bc.dims.x1, (bc.dims.y2 - cy), bc.dims.x2, bc.dims.y2, &dims);
+                    GphFontColor(gph, bc.fore, bc.back);
+                    GphText(gph, &dims, ALIGN_LEFT, L"%s", bc.text);
+                }
+            }else{
+                // failed, draw informational text
+                GphClear(gph, NULL, GGRAY);
+                GphFontColor(gph, GWHITE, GGRAY);
+                GphText(gph, NULL, ALIGN_CENTER2D, L"%s", BAR_ERR_DRAWING);
             }
-        }else{
-            // failed, draw informational text
-            GphClear(gph, NULL, GGRAY);
-            GphFontColor(gph, GWHITE, GGRAY);
-            GphText(gph, NULL, ALIGN_CENTER2D, L"%s", BARCODE_ERR_DRAWING);
         }
-    }
 
-    GphBlit(gph);
+        GphBlit(gph);
+        GphPaint(gph, hwnd);
+    }
 }
 
 /* enable and/or disable options on the dialog based on barcode type selected */
@@ -126,53 +186,53 @@ void EnableOptions(const HWND hwnd)
         // default start stop codes to be disabled
         Enable(hwnd, IDC_CHAR_STOP, FALSE);
         Enable(hwnd, IDC_CHAR_START, FALSE);
-        Enable(hwnd, IDC_BARCODE_SHOW_TEXT, TRUE);
-        CheckDlgButton(hwnd, IDC_BARCODE_SHOW_TEXT, BST_UNCHECKED);
+        Enable(hwnd, IDC_BAR_SHOW_TEXT, TRUE);
+        CheckDlgButton(hwnd, IDC_BAR_SHOW_TEXT, BST_UNCHECKED);
 
         // determine selected barcode type
-        switch(ListIndex(hwnd, IDC_BARCODE_TYPE, LISTIDX_SEL))
+        switch(ListIndex(hwnd, IDC_BAR_TYPE, LISTIDX_SEL))
         {
-            case BARCODE_39:
-            case BARCODE_39_MOD43:
-                ListInsert(hwnd, IDC_CHAR_START, LISTIDX_INVAL, L"%c", BARCODE_START_STOP_39);
-                ListInsert(hwnd, IDC_CHAR_STOP, LISTIDX_INVAL, L"%c", BARCODE_START_STOP_39);
+            case BAR_39:
+            case BAR_39_MOD43:
+                ListInsert(hwnd, IDC_CHAR_START, LISTIDX_INVAL, L"%c", BAR_START_STOP_39);
+                ListInsert(hwnd, IDC_CHAR_STOP, LISTIDX_INVAL, L"%c", BAR_START_STOP_39);
                 break;
 
-            case BARCODE_93:
-                ListInsert(hwnd, IDC_CHAR_START, LISTIDX_INVAL, L"%c", BARCODE_START_STOP_93);
-                ListInsert(hwnd, IDC_CHAR_STOP, LISTIDX_INVAL, L"%c", BARCODE_START_STOP_93);
+            case BAR_93:
+                ListInsert(hwnd, IDC_CHAR_START, LISTIDX_INVAL, L"%c", BAR_START_STOP_93);
+                ListInsert(hwnd, IDC_CHAR_STOP, LISTIDX_INVAL, L"%c", BAR_START_STOP_93);
                 break;
 
-            case BARCODE_CODA:
+            case BAR_CODA:
                 Enable(hwnd, IDC_CHAR_STOP, TRUE);
                 Enable(hwnd, IDC_CHAR_START, TRUE);
-                for(n = 0; (n < StrLen(BARCODE_START_STOP_CODA, (STR_TINY * sizeof(wchar_t)))); ++n)
+                for(n = 0; (n < StrLen(BAR_START_STOP_CODA, (STR_TINY * sizeof(wchar_t)))); ++n)
                 {
-                    ListInsert(hwnd, IDC_CHAR_START, LISTIDX_INVAL, L"%c", BARCODE_START_STOP_CODA[n]);
-                    ListInsert(hwnd, IDC_CHAR_STOP, LISTIDX_INVAL, L"%c", BARCODE_START_STOP_CODA[n]);
+                    ListInsert(hwnd, IDC_CHAR_START, LISTIDX_INVAL, L"%c", BAR_START_STOP_CODA[n]);
+                    ListInsert(hwnd, IDC_CHAR_STOP, LISTIDX_INVAL, L"%c", BAR_START_STOP_CODA[n]);
                 }
                 break;
 
-            case BARCODE_I2OF5:
-                ListInsert(hwnd, IDC_CHAR_START, LISTIDX_INVAL, L"%c", BARCODE_START_I2OF5);
-                ListInsert(hwnd, IDC_CHAR_STOP, LISTIDX_INVAL, L"%c", BARCODE_STOP_I2OF5);
-                for(n = 0; (n < StrLen(BARCODE_START_STOP_UPC, (STR_TINY * sizeof(wchar_t)))); ++n)
+            case BAR_I2OF5:
+                ListInsert(hwnd, IDC_CHAR_START, LISTIDX_INVAL, L"%c", BAR_START_I2OF5);
+                ListInsert(hwnd, IDC_CHAR_STOP, LISTIDX_INVAL, L"%c", BAR_STOP_I2OF5);
+                for(n = 0; (n < StrLen(BAR_START_STOP_UPC, (STR_TINY * sizeof(wchar_t)))); ++n)
                 {
-                    ListInsert(hwnd, IDC_CHAR_START, LISTIDX_INVAL, L"%c", BARCODE_START_STOP_UPC[n]);
-                    ListInsert(hwnd, IDC_CHAR_STOP, LISTIDX_INVAL, L"%c", BARCODE_START_STOP_UPC[n]);
+                    ListInsert(hwnd, IDC_CHAR_START, LISTIDX_INVAL, L"%c", BAR_START_STOP_UPC[n]);
+                    ListInsert(hwnd, IDC_CHAR_STOP, LISTIDX_INVAL, L"%c", BAR_START_STOP_UPC[n]);
                 }
                 break;
 
-            case BARCODE_UPCA:
-            case BARCODE_UPCE:
+            case BAR_UPCA:
+            case BAR_UPCE:
                 Enable(hwnd, IDC_CHAR_STOP, TRUE);
                 Enable(hwnd, IDC_CHAR_START, TRUE);
-                Enable(hwnd, IDC_BARCODE_SHOW_TEXT, FALSE);
-                CheckDlgButton(hwnd, IDC_BARCODE_SHOW_TEXT, BST_CHECKED);
-                for(n = 0; (n < StrLen(BARCODE_START_STOP_UPC, (STR_TINY * sizeof(wchar_t)))); ++n)
+                Enable(hwnd, IDC_BAR_SHOW_TEXT, FALSE);
+                CheckDlgButton(hwnd, IDC_BAR_SHOW_TEXT, BST_CHECKED);
+                for(n = 0; (n < StrLen(BAR_START_STOP_UPC, (STR_TINY * sizeof(wchar_t)))); ++n)
                 {
-                    ListInsert(hwnd, IDC_CHAR_START, LISTIDX_INVAL, L"%c", BARCODE_START_STOP_UPC[n]);
-                    ListInsert(hwnd, IDC_CHAR_STOP, LISTIDX_INVAL, L"%c", BARCODE_START_STOP_UPC[n]);
+                    ListInsert(hwnd, IDC_CHAR_START, LISTIDX_INVAL, L"%c", BAR_START_STOP_UPC[n]);
+                    ListInsert(hwnd, IDC_CHAR_STOP, LISTIDX_INVAL, L"%c", BAR_START_STOP_UPC[n]);
                 }
                 break;
         }
@@ -186,9 +246,9 @@ void EnableOptions(const HWND hwnd)
 /* helper function to reach into dialog controls and return PX24 object */
 static void GetColor(const HWND hwnd, const BOOL fore, PX24 *clr)
 {
-    const long  idR = ((fore == TRUE) ? IDC_BARCODE_COLOR_R : IDC_BARCODE_BACK_R);
-    const long  idG = ((fore == TRUE) ? IDC_BARCODE_COLOR_G : IDC_BARCODE_BACK_G);
-    const long  idB = ((fore == TRUE) ? IDC_BARCODE_COLOR_B : IDC_BARCODE_BACK_B);
+    const long  idR = ((fore == TRUE) ? IDC_BAR_COLOR_R : IDC_BAR_BACK_R);
+    const long  idG = ((fore == TRUE) ? IDC_BAR_COLOR_G : IDC_BAR_BACK_G);
+    const long  idB = ((fore == TRUE) ? IDC_BAR_COLOR_B : IDC_BAR_BACK_B);
 
     long    val = 0;
 
@@ -202,22 +262,19 @@ static void GetColor(const HWND hwnd, const BOOL fore, PX24 *clr)
         // get red value
         if(TextGet(hwnd, idR, temp, sizeof(temp)))
         {
-            Convert(CONVERT_STR_LNG, &val, temp, sizeof(val));
-            clr->r = (BYTE)Clamp(val, 0, 255);
+            clr->r = (BYTE)Clamp(ToLong(temp), 0, 255);
         }
 
         // get green value
         if(TextGet(hwnd, idG, temp, sizeof(temp)))
         {
-            Convert(CONVERT_STR_LNG, &val, temp, sizeof(val));
-            clr->g = (BYTE)Clamp(val, 0, 255);
+            clr->g = (BYTE)Clamp(ToLong(temp), 0, 255);
         }
 
         // get blue value
         if(TextGet(hwnd, idB, temp, sizeof(temp)))
         {
-            Convert(CONVERT_STR_LNG, &val, temp, sizeof(val));
-            clr->b = (BYTE)Clamp(val, 0, 255);
+            clr->b = (BYTE)Clamp(ToLong(temp), 0, 255);
         }
     }
 }
@@ -225,11 +282,6 @@ static void GetColor(const HWND hwnd, const BOOL fore, PX24 *clr)
 /* configure dialog field controls */
 static void SetupDialog(void)
 {
-    const wchar_t   names[BARCODE_LAST][STR_SMALL] = {
-        L"BARCODE 39", L"BARCODE 39 MOD 43", L"BARCODE 93",
-        L"CODABAR", L"I2of5", L"UPCA", L"UPCE"
-    };
-
     PX24    back = {0};
     PX24    color = {0};
 
@@ -240,39 +292,39 @@ static void SetupDialog(void)
     Center(wnd.handl, 0, NULL);
 
     // get dimensions of drawing area
-    Dims(wnd.handl, IDC_BARCODE, NULL, &bc.dims);
+    Dims(wnd.handl, IDC_BAR, NULL, &bc.dims);
 
     // add in all barcode types and select first one
-    for(n = 0; (n < BARCODE_LAST); ++n)
+    for(n = 0; (n < BAR_LAST); ++n)
     {
-        ListInsert(wnd.handl, IDC_BARCODE_TYPE, -1, L"%s", names[n]);
+        ListInsert(wnd.handl, IDC_BAR_TYPE, -1, L"%s", barcodes[n]);
     }
-    ListSelect(wnd.handl, IDC_BARCODE_TYPE, 0, 0);
+    ListSelect(wnd.handl, IDC_BAR_TYPE, 0, 0);
 
     // limit text input for RGB values
-    EditLimit(wnd.handl, IDC_BARCODE_BACK_R, RGB_TEXT_LIMIT);
-    EditLimit(wnd.handl, IDC_BARCODE_BACK_G, RGB_TEXT_LIMIT);
-    EditLimit(wnd.handl, IDC_BARCODE_BACK_B, RGB_TEXT_LIMIT);
-    EditLimit(wnd.handl, IDC_BARCODE_COLOR_R, RGB_TEXT_LIMIT);
-    EditLimit(wnd.handl, IDC_BARCODE_COLOR_G, RGB_TEXT_LIMIT);
-    EditLimit(wnd.handl, IDC_BARCODE_COLOR_B, RGB_TEXT_LIMIT);
+    EditLimit(wnd.handl, IDC_BAR_BACK_R, RGB_TEXT_LIMIT);
+    EditLimit(wnd.handl, IDC_BAR_BACK_G, RGB_TEXT_LIMIT);
+    EditLimit(wnd.handl, IDC_BAR_BACK_B, RGB_TEXT_LIMIT);
+    EditLimit(wnd.handl, IDC_BAR_COLOR_R, RGB_TEXT_LIMIT);
+    EditLimit(wnd.handl, IDC_BAR_COLOR_G, RGB_TEXT_LIMIT);
+    EditLimit(wnd.handl, IDC_BAR_COLOR_B, RGB_TEXT_LIMIT);
 
     // grab the colors for the barcode and layout on the dialog
     Px24(bc.back, &back);
     Px24(bc.fore, &color);
 
     // space color
-    TextSet(wnd.handl, IDC_BARCODE_BACK_R, L"%03d", back.r);
-    TextSet(wnd.handl, IDC_BARCODE_BACK_G, L"%03d", back.g);
-    TextSet(wnd.handl, IDC_BARCODE_BACK_B, L"%03d", back.b);
+    TextSet(wnd.handl, IDC_BAR_BACK_R, L"%03d", back.r);
+    TextSet(wnd.handl, IDC_BAR_BACK_G, L"%03d", back.g);
+    TextSet(wnd.handl, IDC_BAR_BACK_B, L"%03d", back.b);
 
     // car color
-    TextSet(wnd.handl, IDC_BARCODE_COLOR_R, L"%03d", color.r);
-    TextSet(wnd.handl, IDC_BARCODE_COLOR_G, L"%03d", color.g);
-    TextSet(wnd.handl, IDC_BARCODE_COLOR_B, L"%03d", color.b);
+    TextSet(wnd.handl, IDC_BAR_COLOR_R, L"%03d", color.r);
+    TextSet(wnd.handl, IDC_BAR_COLOR_G, L"%03d", color.g);
+    TextSet(wnd.handl, IDC_BAR_COLOR_B, L"%03d", color.b);
 
     // stretch out the bitmap display area
-    SendDlgItemMessage(wnd.handl, IDC_BARCODE, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)GphBmp(gph));
+    SendDlgItemMessage(wnd.handl, IDC_BAR, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)GphBmp(gph));
 }
 
 /* helper function to initialize win32 graphics */
@@ -284,22 +336,22 @@ static BOOL SetupGDI(void)
     BOOL    success = FALSE;
 
     // adjust dialog client dimensions for password list
-    if(Dims(wnd.handl, IDC_BARCODE_CONTROL, &ctrl, NULL) == TRUE)
+    if(Dims(wnd.handl, IDC_BAR_CONTROL, &ctrl, NULL) == TRUE)
     {
         // stand up the graphics
         Quad(0, 0, (wnd.client.cx - ctrl.x2), ctrl.cy, &dims);
-        if(Gph(GetDlgItem(wnd.handl, IDC_BARCODE), dims, &gph) == TRUE)
+        if(Gph(GetDlgItem(wnd.handl, IDC_BAR), dims, &gph) == TRUE)
         {
             // create the font needed for the password list
-            font = FontGDI(BARCODE_FONT_NAME, BARCODE_FONT_SIZE, TRUE, FALSE, FALSE);
+            font = FontGDI(BAR_FONT_NAME, BAR_FONT_SIZE, TRUE, FALSE, FALSE);
             if(font >= 0)
             {
                 // assign the font
-                GphFont(&gph, font);
+                GphFontSet(gph, font);
 
                 // set up some default barcode properties
                 MemClear(&bc, sizeof(bc));
-                QuadCentered(gph.client.mx, gph.client.my, (gph.client.cx - (2 * BARCODE_PAD_CX)), (gph.client.cy - (2 * BARCODE_PAD_CY)), &bc.dims);
+                QuadCentered(gph.client.mx, gph.client.my, (gph.client.cx - (2 * BAR_PAD_CX)), (gph.client.cy - (2 * BAR_PAD_CY)), &bc.dims);
                 bc.fore = GBLACK;
                 bc.back = GWHITE;
                 success = TRUE;
@@ -316,7 +368,7 @@ BOOL Standup(void)
     BOOL    success = FALSE;
 
     // load and set application icon
-    if(WindowIcon(IDI_BARCODE, &wnd))
+    if(WindowIcon(IDI_BAR, &wnd))
     {
         // stand up GDI graphics
         if(SetupGDI())
