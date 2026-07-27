@@ -1,32 +1,33 @@
 /**
   @file     barcode.h
   @brief    Header file for BARCODE application
-  @author   suendisra
 */
 #ifndef _BARCODE_H_
 #define _BARCODE_H_
 
-#include <util.h>
-#include <util-cli.h>
-#include <util-map.h>
-#include <util-async.h>
+#include <util-quad.h>
+#include <util-std.h>
+#include <util-str.h>
 
-#include <gph.h>
-#include <gph-barcode.h>
-#include <gph-font.h>
+#include <gph-std.h>
 
-#include <win.h>
+#include <win-std.h>
 
-#include "resource.h"
-
-#define APP_COPYRIGHT               2025
-#define APP_TITLE                   L"BARCODE"
-#define APP_VERSION                 L"0.0.0"
-
-// include needed libraries
-#pragma comment(lib, "UTIL.lib")
+// bring in appropriate version of library
+#ifndef _DEBUG
 #pragma comment(lib, "GPH.lib")
+#pragma comment(lib, "UTIL.lib")
 #pragma comment(lib, "WIN.lib")
+#else
+#pragma comment(lib, "GPHD.lib")
+#pragma comment(lib, "UTILD.lib")
+#pragma comment(lib, "WIND.lib")
+#endif
+
+#define APP_COPYRIGHT   2025
+#define APP_LOG         L"barcode.log"
+#define APP_TITLE       L"BARCODE"
+#define APP_VERSION     L"1.031"
 
 struct
 {
@@ -43,13 +44,6 @@ struct
 
 WNDW    wnd;
 GPH     gph;
-
-/**
-  @fn           BOOL BarcodeCLI(void)
-  @brief        process CLI arguments
-  @return       TRUE if command line arguments were processed, FALSE otherwise
-*/
-BOOL BarcodeCLI(void);
 
 /**
   @fn           BOOL ConfigBarcode(const HWND hwnd)

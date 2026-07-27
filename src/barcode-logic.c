@@ -1,9 +1,15 @@
 /**
   @file     barcode-logic.c
   @brief    Source file for BARCODE application primary logic
-  @author   suendisra
 */
 #include "barcode.h"
+#include "resource.h"
+
+#include <gph-font.h>
+#include <gph-px.h>
+
+#include <util-mem.h>
+#include <util-str.h>
 
 #define BARCODE_ERR_DRAWING L"Error encountered while attempting to draw given barcode text"
 #define BARCODE_FONT_NAME   L"Consolas"
@@ -87,7 +93,7 @@ void DrawBarcode(void)
         if(Barcode(gph, &bc.dims, bc.type, bc.fore, bc.back, bc.text, sizeof(bc.text)) == TRUE)
         {
             // success, draw text if desired
-            if((bc.drawtext == TRUE) && (FontDims(font, gph.mem.dc, NULL, &cy, L"%s", bc.text) == TRUE))
+            if((bc.drawtext == TRUE) && (FontDims(font, GphDC(gph), NULL, &cy, L"%s", bc.text) == TRUE))
             {
                 Quad(bc.dims.x1, (bc.dims.y2 - cy), bc.dims.x2, bc.dims.y2, &dims);
                 GphFontColor(gph, bc.fore, bc.back);
@@ -229,6 +235,13 @@ static void SetupDialog(void)
 
     long    n = 0;
 
+    // set dialog caption and center on screen
+    TextSet(wnd.handl, 0, L"%s %s", APP_TITLE, APP_VERSION);
+    Center(wnd.handl, 0, NULL);
+
+    // get dimensions of drawing area
+    Dims(wnd.handl, IDC_BARCODE, NULL, &bc.dims);
+
     // add in all barcode types and select first one
     for(n = 0; (n < BARCODE_LAST); ++n)
     {
@@ -259,7 +272,7 @@ static void SetupDialog(void)
     TextSet(wnd.handl, IDC_BARCODE_COLOR_B, L"%03d", color.b);
 
     // stretch out the bitmap display area
-    SendDlgItemMessage(wnd.handl, IDC_BARCODE, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)gph.mem.bmp);
+    SendDlgItemMessage(wnd.handl, IDC_BARCODE, STM_SETIMAGE, IMAGE_BITMAP, (LPARAM)GphBmp(gph));
 }
 
 /* helper function to initialize win32 graphics */
@@ -303,12 +316,10 @@ BOOL Standup(void)
     BOOL    success = FALSE;
 
     // load and set application icon
-    if(Resource(RSC_TYPE_ICO, IDI_BARCODE, &wnd.icon, sizeof(wnd.icon)) == TRUE)
+    if(WindowIcon(IDI_BARCODE, &wnd))
     {
-        WindowIcon(wnd.handl, 0, wnd.icon);
-
         // stand up GDI graphics
-        if(SetupGDI() == TRUE)
+        if(SetupGDI())
         {
             // configure the fields in the dialog
             SetupDialog();

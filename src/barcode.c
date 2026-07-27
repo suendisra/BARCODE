@@ -1,9 +1,9 @@
 /**
   @file     barcode.c
   @brief    Source file for BARCODE application
-  @author   suendisra
 */
 #include "barcode.h"
+#include "resource.h"
 
 // static prototypes
 static INT_PTR CALLBACK MainDlgProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
@@ -11,22 +11,16 @@ static INT_PTR CALLBACK MainDlgProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
 /* wWinMain */
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE previnst, LPWSTR cmd, int show)
 {
-    // if running app from command line, do the work and exit
-    if(BarcodeCLI() == FALSE)
-    {
-        // initialize for GUI application
-        WinInit(instance, previnst, cmd, show);
+    // initialize for GUI application
+    WinInit(instance, previnst, cmd, show);
 
-        // create window and loop it
-        Dims(NULL, 0, NULL, &wnd.client);
-        if(Dialog(MainDlgProc, IDD_BARCODE, NULL, &wnd) == TRUE)
-        {
-            // loop application window procedure
-            wnd.mode = LOOP_DLG;
-            wnd.init = Standup;
-            wnd.stop = Shutdown;
-            Loop(&wnd);
-        }
+    // create window and loop it
+    Dims(NULL, 0, NULL, &wnd.client);
+    if(Dialog(IDD_BARCODE, NULL, &wnd))
+    {
+        // loop application window procedure
+        WindowConfig(Standup, NULL, Shutdown, &wnd);
+        Loop(wnd);
     }
 
     return(0);
@@ -47,35 +41,12 @@ INT_PTR CALLBACK MainDlgProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
     switch(msg)
     {
-        case WM_INITDIALOG:
-            // set dialog caption and center on screen
-            TextSet(hwnd, 0, L"%s %s", APP_TITLE, APP_VERSION);
-            Center(hwnd, 0, NULL);
-
-            // get dimensions of drawing area
-            Dims(hwnd, IDC_BARCODE, NULL, &bc.dims);
-            break;
-
         case WM_PAINT:
             // whenever the dialog is repainted, we need to repaint the barcode too
-            if(GphPaint(&gph, hwnd) == TRUE)
+            if(GphPaint(gph, hwnd) == TRUE)
             {
                 DrawBarcode();
-                GphPaint(&gph, hwnd);
-            }
-            break;
-
-        case WM_SYSCOMMAND:
-            switch(LOWORD(wp))
-            {
-                case SC_CLOSE:
-                case SC_DEFAULT:
-                    Kill(hwnd);
-                    break;
-
-                default:
-                    rval = DefWindowProc(hwnd, msg, wp, lp);
-                    break;
+                GphPaint(gph, hwnd);
             }
             break;
 
