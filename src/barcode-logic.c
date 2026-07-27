@@ -368,11 +368,11 @@ static BOOL SetupGDI(void)
     BOOL    success = FALSE;
 
     // adjust dialog client dimensions for password list
-    if(Dims(wnd.handl, IDC_BAR_CONTROL, &ctrl, NULL) == TRUE)
+    if(Dims(wnd.handl, IDC_BAR_CONTROL, &ctrl, NULL))
     {
         // stand up the graphics
-        Quad(0, 0, (wnd.client.cx - ctrl.x2), ctrl.cy, &dims);
-        if(Gph(GetDlgItem(wnd.handl, IDC_BAR), dims, &gph) == TRUE)
+        Quad(0, 0, wnd.client.cx, ctrl.cy, &dims);
+        if(Gph(GetDlgItem(wnd.handl, IDC_BAR), dims, &gph))
         {
             // create the font needed for the password list
             font = FontGDI(BAR_FONT_NAME, BAR_FONT_SIZE, TRUE, FALSE, FALSE);
