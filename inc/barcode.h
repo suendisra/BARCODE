@@ -55,24 +55,10 @@ GPH     gph;
 BOOL Commands(const HWND hwnd, const WPARAM wp, const LPARAM lp);
 
 /**
-  @fn           BOOL ConfigBarcode(const HWND hwnd)
-  @brief        grabs dialog information for drawing the barcode
-  @param[in]    hwnd handle to dialog window with information needed to generate the barcode
-*/
-BOOL ConfigBarcode(const HWND hwnd);
-
-/**
   @fn           void DrawBarcode(void)
   @brief        draw the background for the barcode area
 */
 void DrawBarcode(const HWND hwnd);
-
-/**
-  @fn           void EnableOptions(const HWND hwnd)
-  @brief        enable and/or disable options on the dialog based on barcode type selected
-  @param[in]    hwnd handle to dialog window with information needed to generate the barcode
-*/
-void EnableOptions(const HWND hwnd);
 
 /**
   @fn           BOOL Standup(void)

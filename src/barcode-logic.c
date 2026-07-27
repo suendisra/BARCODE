@@ -13,12 +13,12 @@
 #include <util-mem.h>
 #include <util-str.h>
 
-#define BAR_ERR_DRAWING L"Error encountered while attempting to draw given barcode text"
-#define BAR_FONT_NAME   L"Consolas"
-#define BAR_FONT_SIZE   24
+#define BAR_ERR_DRAWING     L"Error encountered while attempting to draw given barcode text"
+#define BAR_FONT_NAME       L"Consolas"
+#define BAR_FONT_SIZE       24
 
-#define BAR_PAD_CX      10
-#define BAR_PAD_CY      20
+#define BAR_PAD_CX          10
+#define BAR_PAD_CY          20
 
 #define RGB_TEXT_LIMIT      3
 
@@ -45,9 +45,11 @@ static const wchar_t    barcodes[BAR_LAST][STR_SMALL] = {
                             L"UPCE"
                         };
 
-static INDEX    font = -1;
+static INDEX            font = -1;
 
 // static prototypes
+static BOOL ConfigBarcode(const HWND hwnd);
+static void EnableOptions(const HWND hwnd);
 static void GetColor(const HWND hwnd, const BOOL fore, PX24 *clr);
 static void SetupDialog(void);
 static BOOL SetupGDI(void);
@@ -84,7 +86,7 @@ BOOL Commands(const HWND hwnd, const WPARAM wp, const LPARAM lp)
 }
 
 /* grabs dialog information for drawing the barcode */
-BOOL ConfigBarcode(const HWND hwnd)
+static BOOL ConfigBarcode(const HWND hwnd)
 {
     PX24    back = {0};
     PX24    color = {0};
@@ -98,26 +100,26 @@ BOOL ConfigBarcode(const HWND hwnd)
     if(hwnd != NULL)
     {
         // grab the barcode text
-        if(TextGet(hwnd, IDC_BAR_TEXT, text, sizeof(text)) == TRUE)
+        if(TextGet(hwnd, IDC_BAR_TEXT, text, sizeof(text)))
         {
             // start code
-            if(Enabled(hwnd, IDC_CHAR_START) == TRUE)
+            if(Enabled(hwnd, IDC_CHAR_START))
             {
                 ListItem(hwnd, IDC_CHAR_START, LISTIDX_SEL, start, sizeof(start));
             }
 
             // stop code
-            if(Enabled(hwnd, IDC_CHAR_STOP) == TRUE)
+            if(Enabled(hwnd, IDC_CHAR_STOP))
             {
                 ListItem(hwnd, IDC_CHAR_STOP, LISTIDX_SEL, stop, sizeof(stop));
             }
 
             // set in the barcode text
-            if(StrFormat(bc.text, sizeof(bc.text), L"%s%s%s", start, text, stop) == TRUE)
+            if(StrFormat(bc.text, sizeof(bc.text), L"%s%s%s", start, text, stop))
             {
                 // get the other barcode properties
                 bc.type = ListIndex(hwnd, IDC_BAR_TYPE, LISTIDX_SEL);
-                bc.drawtext = (IsDlgButtonChecked(hwnd, IDC_BAR_SHOW_TEXT) == BST_CHECKED);
+                bc.drawtext = ButtonChecked(hwnd, IDC_BAR_SHOW_TEXT);
 
                 // grab color for the bar
                 GetColor(hwnd, TRUE, &color);
@@ -140,6 +142,8 @@ void DrawBarcode(const HWND hwnd)
 {
     QUAD    dims = {0};
     long    cy = 0;
+    long    len = 0;
+    BOOL    drawn = FALSE;
 
     if(GphPaint(gph, hwnd))
     {
@@ -147,8 +151,36 @@ void DrawBarcode(const HWND hwnd)
         if(bc.text[0] != CHARNULL)
         {
             // attempt to draw the barcode
-            //if(Barcode(gph, &bc.dims, bc.type, bc.fore, bc.back, bc.text, sizeof(bc.text)))
-            if(FALSE)
+            len = StrLen(bc.text, sizeof(bc.text));
+            switch(bc.type)
+            {
+                case BAR_39:
+                case BAR_39_MOD43:
+                    drawn = Bar39(gph, bc.dims, bc.fore, bc.back, (bc.type == BAR_39_MOD43), bc.text, len);
+                    break;
+
+                case BAR_93:
+                    drawn = Bar93(gph, bc.dims, bc.fore, bc.back, bc.text, len);
+                    break;
+
+                case BAR_CODA:
+                    drawn = BarCoda(gph, bc.dims, bc.fore, bc.back, bc.text, len);
+                    break;
+
+                case BAR_I2OF5:
+                    drawn = BarI2of5(gph, bc.dims, bc.fore, bc.back, bc.text, len);
+                    break;
+
+                case BAR_UPCA:
+                    drawn = BarUPCA(gph, bc.dims, bc.fore, bc.back, bc.text, len);
+                    break;
+
+                case BAR_UPCE:
+                    drawn = BarUPCE(gph, bc.dims, bc.fore, bc.back, bc.text, len);
+                    break;
+            }
+
+            if(drawn)
             {
                 // success, draw text if desired
                 if(bc.drawtext && FontDims(font, GphDC(gph), NULL, &cy, L"%s", bc.text))
@@ -171,7 +203,7 @@ void DrawBarcode(const HWND hwnd)
 }
 
 /* enable and/or disable options on the dialog based on barcode type selected */
-void EnableOptions(const HWND hwnd)
+static void EnableOptions(const HWND hwnd)
 {
     enum BARCODETYPE    type = 0;
 
@@ -388,4 +420,5 @@ void Shutdown(void)
 {
     FontKillGDI(font);
     GphKill(&gph);
+    WindowKill(&wnd);
 }
